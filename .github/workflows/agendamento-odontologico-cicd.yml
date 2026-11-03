@@ -1,0 +1,68 @@
+name: Agendamento Odontologico CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agendamento-odontologico-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Permitir execucao do Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Executar testes e gerar o pacote
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          for name in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Cadastre o secret $name em Settings > Secrets and variables > Actions."
+              exit 1
+            fi
+          done
+          ./mvnw --batch-mode --no-transfer-progress clean verify
+
+      - name: Validar a imagem Docker
+        run: docker build -t agendamento-odontologico:${{ github.sha }} .
+
+  deploy:
+    needs: test-and-build
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Acionar deploy do commit validado no Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Cadastre o secret RENDER_DEPLOY_HOOK_URL."
+            exit 1
+          fi
+          curl --fail --silent --show-error --output /dev/null \
+            --connect-timeout 10 --max-time 60 \
+            "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
