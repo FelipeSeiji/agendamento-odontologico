@@ -7,7 +7,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: 'off'
     envVars:
       - key: DB_URL
         sync: false
