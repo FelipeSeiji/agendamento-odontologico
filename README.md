@@ -79,7 +79,7 @@ Crie **New > Web Service** com o seu repositório e configure:
 | Dockerfile Path | `./Dockerfile` |
 | Docker Build Context | `.` |
 | Health Check Path | `/actuator/health` |
-| Auto-Deploy | `Off` para deixar o GitHub Actions controlar os próximos deploys |
+| Auto-Deploy | `After CI Checks Pass` para publicar somente após os testes e o build Docker passarem |
 
 Cadastre `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` e `JWT_SECRET` no ambiente do Render, além de `PORT=10000`. Os secrets do GitHub não são transferidos automaticamente. Escolha o plano gratuito se estiver disponível e revise os valores antes de criar o serviço.
 
@@ -89,16 +89,15 @@ Após a primeira implantação, confira `https://SEU_SERVICO.onrender.com/actuat
 
 ## Deploy após o CI
 
-1. No Render, copie **Settings > Deploy Hook**.
-2. No GitHub, cadastre esse endereço no secret `RENDER_DEPLOY_HOOK_URL`.
-3. No GitHub, em **Secrets and variables > Actions > Variables**, crie `DEPLOY_ENABLED` com valor `true`.
-4. Faça um push para `main` ou execute o workflow manualmente na `main`.
+1. No Render, selecione **Settings > Auto-Deploy > After CI Checks Pass**.
+2. Faça um push para `main`.
+3. Acompanhe o job `test-and-build` no GitHub Actions e o deploy no Render.
 
-O job `deploy` depende do sucesso de `test-and-build` e solicita ao Render o mesmo commit validado. O hook confirma que o deploy foi acionado; acompanhe o término e o endpoint de saúde no Render. Sem `DEPLOY_ENABLED=true`, somente o CI roda.
+O GitHub Actions executa os testes e valida a imagem. A integração nativa do Render acompanha o resultado dos checks e publica o commit após o sucesso do CI. Não é necessário cadastrar deploy hook ou outro secret. Acompanhe o término da implantação e confirme o endpoint de saúde no Render.
 
 ## Referências
 
 - [Spring Boot Actuator](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html)
 - [Maven Wrapper](https://maven.apache.org/tools/wrapper/)
-- [Deploy hooks do Render](https://render.com/docs/deploy-hooks)
+- [Deploy após os checks de CI no Render](https://render.com/docs/deploys#automatic-deploys)
 - [Blueprints do Render](https://render.com/docs/blueprint-spec)

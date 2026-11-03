@@ -48,21 +48,3 @@ jobs:
 
       - name: Validar a imagem Docker
         run: docker build -t agendamento-odontologico:${{ github.sha }} .
-
-  deploy:
-    needs: test-and-build
-    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Acionar deploy do commit validado no Render
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "::error::Cadastre o secret RENDER_DEPLOY_HOOK_URL."
-            exit 1
-          fi
-          curl --fail --silent --show-error --output /dev/null \
-            --connect-timeout 10 --max-time 60 \
-            "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
